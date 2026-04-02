@@ -26,7 +26,7 @@ export default function App() {
       
       if (isColumnFull) {
         setIsGameOver(true);
-        return updatedGrid; // Oyunu bitir ve spawn yapmadan çık
+        return updatedGrid;
       }    
       if (tickCounter % 5 === 0) {
         updatedGrid = spawnNewBlock(updatedGrid);
