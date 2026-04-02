@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, SafeAreaView, Dimensions } from 'react-native';
-import { initializeGrid } from './src/logic/GridManager';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Dimensions, Text } from 'react-native';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
+import { initializeGrid, applyGravity } from './src/logic/GridManager';
 import { GRID_SIZE } from './src/constants/GameConfig';
 
 const { width } = Dimensions.get('window');
@@ -8,23 +9,41 @@ const CELL_SIZE = (width - 40) / GRID_SIZE.COLUMNS; // Ekran genişliğine göre
 
 export default function App() {
   // Senin yazdığın matrisi state olarak tutuyoruz
-  const [grid] = useState(initializeGrid());
+  const [grid, setGrid] = useState(initializeGrid());
+
+  useEffect(() => {
+    // 5 saniyede bir (5000ms) yerçekimini çalıştır
+    const gameLoop = setInterval(() => {
+      setGrid(prevGrid => applyGravity(prevGrid));
+    }, 5000);
+
+    return () => clearInterval(gameLoop); // Uygulama kapanınca timer'ı temizle
+  }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.gridBoard}>
-        {grid.map((row, rowIndex) => (
-          <View key={`row-${rowIndex}`} style={styles.row}>
-            {row.map((_, colIndex) => (
-              <View 
-                key={`cell-${rowIndex}-${colIndex}`} 
-                style={styles.cell} 
-              />
-            ))}
-          </View>
-        ))}
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.gridBoard}>
+          {grid.map((row, rowIndex) => (
+  <View key={`row-${rowIndex}`} style={styles.row}>
+    {row.map((block, colIndex) => (
+      <View 
+        key={`cell-${rowIndex}-${colIndex}`} 
+        style={[
+          styles.cell, 
+          block ? { backgroundColor: block.color } : null 
+        ]}
+      >
+        {block && (
+          <Text style={styles.blockText}>{block.value}</Text>
+        )}
       </View>
-    </SafeAreaView>
+    ))}
+  </View>
+))}
+        </View>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -55,10 +74,17 @@ const styles = StyleSheet.create({
   cell: {
     width: CELL_SIZE - 4,
     height: CELL_SIZE - 4,
-    backgroundColor: '#334155', // Boş hücre içi (Hafif parlayan gri)
+    backgroundColor: '#334155', 
     margin: 2,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#475569', // Hücre kenarlığı (Belirgin çizgiler)
+    borderColor: '#475569', 
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  blockText: {
+    color: '#F8FAFC', // Parlak beyaz (Sayı metni)
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
