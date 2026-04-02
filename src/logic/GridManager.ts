@@ -26,8 +26,7 @@ export const initializeGrid = (): GameGrid => {
     grid.push(row);
   }
 
-  // Test bloğu
-  grid[1][4] = createRandomBlock();
+
 
   return grid;
 };
@@ -46,5 +45,27 @@ export const applyGravity = (currentGrid: GameGrid): GameGrid => {
     }
   }
   
+  return newGrid;
+};
+
+export const spawnNewBlock = (grid: GameGrid): GameGrid => {
+  const newGrid = grid.map(row => [...row]);
+  
+  // Tepesi boş olan sütunların tespiti
+  const availableColumns: number[] = [];
+  for (let c = 0; c < GRID_SIZE.COLUMNS; c++) {
+    if (newGrid[0][c] === null) {
+      availableColumns.push(c);
+    }
+  }
+
+  // Boş olan bloğun tepesine rastgele blok spawnlama
+  if (availableColumns.length > 0) {
+    const randomIndex = Math.floor(Math.random() * availableColumns.length);
+    const selectedColumn = availableColumns[randomIndex];
+    
+    newGrid[0][selectedColumn] = createRandomBlock();
+  } 
+
   return newGrid;
 };

@@ -1,50 +1,87 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Dimensions, Text } from 'react-native';
+import { StyleSheet, View, Dimensions, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { initializeGrid, applyGravity } from './src/logic/GridManager';
+import { initializeGrid, applyGravity, spawnNewBlock } from './src/logic/GridManager';
 import { GRID_SIZE } from './src/constants/GameConfig';
 
 const { width } = Dimensions.get('window');
-const CELL_SIZE = (width - 40) / GRID_SIZE.COLUMNS; // Ekran genişliğine göre kare boyutu
-
+const CELL_SIZE = (width - 40) / GRID_SIZE.COLUMNS; 
 export default function App() {
-  // Senin yazdığın matrisi state olarak tutuyoruz
   const [grid, setGrid] = useState(initializeGrid());
+  const [isGameOver, setIsGameOver] = useState(false);
 
   useEffect(() => {
-    // 5 saniyede bir (5000ms) yerçekimini çalıştır
-    const gameLoop = setInterval(() => {
-      setGrid(prevGrid => applyGravity(prevGrid));
-    }, 5000);
+  if (isGameOver) return;
 
-    return () => clearInterval(gameLoop); // Uygulama kapanınca timer'ı temizle
-  }, []);
+  let tickCounter = 0;
+  const gameLoop = setInterval(() => {
+    tickCounter++;
+    
+    setGrid(prevGrid => {
+      let updatedGrid = applyGravity(prevGrid);
+
+      
+      const isColumnFull = updatedGrid[0].some(cell => cell !== null);
+      
+      if (isColumnFull) {
+        setIsGameOver(true);
+        return updatedGrid; // Oyunu bitir ve spawn yapmadan çık
+      }
+
+      
+      if (tickCounter % 5 === 0) {
+        updatedGrid = spawnNewBlock(updatedGrid);
+      }
+
+      return updatedGrid;
+    });
+  }, 1000);
+
+  return () => clearInterval(gameLoop);
+}, [isGameOver]);
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
+  <SafeAreaProvider>
+    <SafeAreaView style={styles.container}>
+      {isGameOver ? (
+        <View style={styles.gameOverContainer}>
+          <Text style={styles.gameOverText}>GAME OVER</Text>
+          
+          <TouchableOpacity 
+            style={styles.restartButton} 
+            onPress={() => {
+              // Oyunu sıfırlayan ve bayrağı indiren buton
+              setGrid(initializeGrid());
+              setIsGameOver(false);
+            }}
+          >
+            <Text style={styles.restartText}>Yeniden Başla</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
         <View style={styles.gridBoard}>
           {grid.map((row, rowIndex) => (
-  <View key={`row-${rowIndex}`} style={styles.row}>
-    {row.map((block, colIndex) => (
-      <View 
-        key={`cell-${rowIndex}-${colIndex}`} 
-        style={[
-          styles.cell, 
-          block ? { backgroundColor: block.color } : null 
-        ]}
-      >
-        {block && (
-          <Text style={styles.blockText}>{block.value}</Text>
-        )}
-      </View>
-    ))}
-  </View>
-))}
+            <View key={`row-${rowIndex}`} style={styles.row}>
+              {row.map((block, colIndex) => (
+                <View 
+                  key={`cell-${rowIndex}-${colIndex}`} 
+                  style={[
+                    styles.cell, 
+                    block ? { backgroundColor: block.color } : null 
+                  ]}
+                >
+                  {block && (
+                    <Text style={styles.blockText}>{block.value}</Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          ))}
         </View>
-      </SafeAreaView>
-    </SafeAreaProvider>
-  );
+      )}
+    </SafeAreaView>
+  </SafeAreaProvider>
+);
 }
 
 const styles = StyleSheet.create({
@@ -60,9 +97,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#334155',
-    // Android için gölge
     elevation: 10,
-    // iOS için gölge
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
@@ -85,6 +120,29 @@ const styles = StyleSheet.create({
   blockText: {
     color: '#F8FAFC', // Parlak beyaz (Sayı metni)
     fontSize: 18,
+    fontWeight: 'bold',
+  },
+  gameOverContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0F172A', // Arka plan iyice kararsın
+  },
+  gameOverText: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#EF4444', // Kırmızı alarm!
+    marginBottom: 20,
+  },
+  restartButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 10,
+  },
+  restartText: {
+    color: 'white',
+    fontSize: 20,
     fontWeight: 'bold',
   },
 });
