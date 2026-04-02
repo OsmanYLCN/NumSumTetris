@@ -1,6 +1,7 @@
 import { GRID_SIZE, NUMBER_COLORS} from '../constants/GameConfig';
 import { GameGrid, Block } from '../types';
 
+// İlk 3 satırda rastgele blok oluşturma fonksiyonu
 const createRandomBlock = (): Block => {
   const value = Math.floor(Math.random() * 9) + 1; 
   return {
@@ -11,6 +12,7 @@ const createRandomBlock = (): Block => {
   };
 };
 
+// Grid oluşturma fonksiyonu
 export const initializeGrid = (): GameGrid => {
   const grid: GameGrid = [];
 
@@ -31,6 +33,8 @@ export const initializeGrid = (): GameGrid => {
   return grid;
 };
 
+
+// Yerçekimi fonksiyonu
 export const applyGravity = (currentGrid: GameGrid): GameGrid => {
   
   const newGrid: GameGrid = currentGrid.map(row => [...row]);
@@ -48,6 +52,7 @@ export const applyGravity = (currentGrid: GameGrid): GameGrid => {
   return newGrid;
 };
 
+// Yeni blok spawner fonksiyonu
 export const spawnNewBlock = (grid: GameGrid): GameGrid => {
   const newGrid = grid.map(row => [...row]);
   

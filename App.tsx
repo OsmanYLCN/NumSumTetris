@@ -1,15 +1,18 @@
+// İmportlar
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Dimensions, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { initializeGrid, applyGravity, spawnNewBlock } from './src/logic/GridManager';
 import { GRID_SIZE } from './src/constants/GameConfig';
 
+// Ana app kodları
 const { width } = Dimensions.get('window');
 const CELL_SIZE = (width - 40) / GRID_SIZE.COLUMNS; 
 export default function App() {
   const [grid, setGrid] = useState(initializeGrid());
   const [isGameOver, setIsGameOver] = useState(false);
 
+  
   useEffect(() => {
   if (isGameOver) return;
 
@@ -19,16 +22,12 @@ export default function App() {
     
     setGrid(prevGrid => {
       let updatedGrid = applyGravity(prevGrid);
-
-      
       const isColumnFull = updatedGrid[0].some(cell => cell !== null);
       
       if (isColumnFull) {
         setIsGameOver(true);
         return updatedGrid; // Oyunu bitir ve spawn yapmadan çık
-      }
-
-      
+      }    
       if (tickCounter % 5 === 0) {
         updatedGrid = spawnNewBlock(updatedGrid);
       }
@@ -50,7 +49,6 @@ export default function App() {
           <TouchableOpacity 
             style={styles.restartButton} 
             onPress={() => {
-              // Oyunu sıfırlayan ve bayrağı indiren buton
               setGrid(initializeGrid());
               setIsGameOver(false);
             }}
@@ -87,13 +85,13 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A', // Derin lacivert/siyah (Arka Plan)
+    backgroundColor: '#0F172A',
     alignItems: 'center',
     justifyContent: 'center',
   },
   gridBoard: {
     padding: 8,
-    backgroundColor: '#1E293B', // Yumuşak yüzey grisi (Oyun Alanı)
+    backgroundColor: '#1E293B',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#334155',
@@ -118,7 +116,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   blockText: {
-    color: '#F8FAFC', // Parlak beyaz (Sayı metni)
+    color: '#F8FAFC', 
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -126,12 +124,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0F172A', // Arka plan iyice kararsın
+    backgroundColor: '#0F172A', 
   },
   gameOverText: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#EF4444', // Kırmızı alarm!
+    color: '#EF4444', 
     marginBottom: 20,
   },
   restartButton: {

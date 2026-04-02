@@ -1,3 +1,4 @@
+// Block objesi tanımı ve özellikleri
 export interface Block {
   id: string;      
   value: number;     
@@ -5,5 +6,5 @@ export interface Block {
   isSelected: boolean; 
 }
 
-
+// Grid tanımı 
 export type GameGrid = (Block | null)[][];
