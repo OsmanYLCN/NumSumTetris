@@ -74,3 +74,67 @@ export const spawnNewBlock = (grid: GameGrid): GameGrid => {
 
   return newGrid;
 };
+
+// Ulaşılabilir rastgele bir hedef sayı belirleme fonksiyonu
+export const generateTargetNumber = (grid: GameGrid): number => {
+  const rows = GRID_SIZE.ROWS;
+  const cols = GRID_SIZE.COLUMNS;
+
+  // 1. Adım: Tüm dolu hücrelerin koordinatlarını bulalım
+  const validCells: { r: number; c: number }[] = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (grid[r][c] !== null) validCells.push({ r, c });
+    }
+  }
+
+  if (validCells.length < 2) return 0; // Ekranda yeterli blok yoksa 0 döndür
+
+  // Dolu hücreleri karıştıralım ki her seferinde farklı bir noktadan başlayalım
+  validCells.sort(() => Math.random() - 0.5);
+
+  // Komşu yönleri (8 yön: yatay, dikey, çapraz)
+  const directions = [
+    [-1, -1], [-1, 0], [-1, 1],
+    [0, -1],           [0, 1],
+    [1, -1],  [1, 0],  [1, 1]
+  ];
+
+  // 2. Adım: Rastgele bir noktadan başlayıp 2 ila 4 blokluk bir yol (path) çizelim
+  for (const startCell of validCells) {
+    const targetLength = Math.floor(Math.random() * 3) + 2; // 2, 3 veya 4 seçer
+    let currentPath = [startCell];
+    let sum = grid[startCell.r][startCell.c]!.value;
+
+    while (currentPath.length < targetLength) {
+      const currentCell = currentPath[currentPath.length - 1];
+      const neighbors: { r: number; c: number }[] = [];
+
+      // Geçerli ve daha önce ziyaret edilmemiş komşuları bul
+      for (const [dr, dc] of directions) {
+        const nr = currentCell.r + dr;
+        const nc = currentCell.c + dc;
+
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] !== null) {
+          const isVisited = currentPath.some(p => p.r === nr && p.c === nc);
+          if (!isVisited) neighbors.push({ r: nr, c: nc });
+        }
+      }
+
+      if (neighbors.length === 0) break; // Çıkmaz sokak, döngüden çık ve başka başlangıç dene
+
+      // Rastgele bir komşuya git ve toplama ekle
+      const nextCell = neighbors[Math.floor(Math.random() * neighbors.length)];
+      currentPath.push(nextCell);
+      sum += grid[nextCell.r][nextCell.c]!.value;
+    }
+
+    // Eğer hedeflediğimiz uzunluğa ulaştıysak bu toplamı hedef sayı yapabiliriz
+    if (currentPath.length === targetLength) {
+      return sum;
+    }
+  }
+
+  // Eğer hiçbir yol bulunamazsa (çok nadir, bloklar kopuksa), en azından ilk iki bloğu toplayıp verelim
+  return grid[validCells[0].r][validCells[0].c]!.value + grid[validCells[1].r][validCells[1].c]!.value;
+};

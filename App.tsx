@@ -1,8 +1,8 @@
 // İmportlar
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Dimensions, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Dimensions, Text, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { initializeGrid, applyGravity, spawnNewBlock } from './src/logic/GridManager';
+import { initializeGrid, applyGravity, spawnNewBlock, generateTargetNumber } from './src/logic/GridManager';
 import { GRID_SIZE } from './src/constants/GameConfig';
 
 // Ana app kodları
@@ -11,6 +11,14 @@ const CELL_SIZE = (width - 40) / GRID_SIZE.COLUMNS;
 export default function App() {
   const [grid, setGrid] = useState(initializeGrid());
   const [isGameOver, setIsGameOver] = useState(false);
+  const [targetNumber, setTargetNumber] = useState(0);
+  const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Oyun ilk yüklendiğinde hedef sayıyı belirle
+  useEffect(() => {
+    setTargetNumber(generateTargetNumber(grid));
+  }, []);
 
   
   useEffect(() => {
@@ -39,6 +47,129 @@ export default function App() {
   return () => clearInterval(gameLoop);
 }, [isGameOver]);
 
+  // Blok tıklama işleyicisi
+  const handleBlockPress = (rowIndex: number, colIndex: number) => {
+    const clickedBlock = grid[rowIndex][colIndex];
+    if (!clickedBlock) return; // Boş hücreye tıklandıysa çık
+
+    // 1. Zaten seçiliyse (Sadece en son seçileni geri alabilme kuralı)
+    if (clickedBlock.isSelected) {
+      if (selectedBlockIds.length > 0 && selectedBlockIds[selectedBlockIds.length - 1] === clickedBlock.id) {
+        setSelectedBlockIds(prev => prev.slice(0, -1)); // Son ID'yi listeden çıkar
+        setGrid(prevGrid => {
+          const newGrid = prevGrid.map(row => [...row]);
+          // Bloğun yeni yerini bulup isSelected değerini false yapıyoruz (yerçekimine karşı güvenli)
+          for (let r = 0; r < newGrid.length; r++) {
+            for (let c = 0; c < newGrid[r].length; c++) {
+              if (newGrid[r][c]?.id === clickedBlock.id) {
+                newGrid[r][c] = { ...newGrid[r][c]!, isSelected: false };
+              }
+            }
+          }
+          return newGrid;
+        });
+      }
+      return; // Daha eski bir bloğa tıkladıysa hiçbir şey yapma
+    }
+
+    // 2. Maksimum 4 blok seçilebilir kuralı
+    if (selectedBlockIds.length >= 4) return;
+
+    // 3. Komşuluk kuralı (Eğer listede daha önce seçilmiş blok varsa)
+    if (selectedBlockIds.length > 0) {
+      const lastSelectedId = selectedBlockIds[selectedBlockIds.length - 1];
+      let lastR = -1, lastC = -1;
+      
+      // En son seçilen bloğun *şu anki* koordinatlarını bul
+      for (let r = 0; r < grid.length; r++) {
+        for (let c = 0; c < grid[r].length; c++) {
+          if (grid[r][c]?.id === lastSelectedId) {
+            lastR = r; lastC = c;
+          }
+        }
+      }
+
+      // Bulunduysa komşu mu diye bak
+      if (lastR !== -1 && lastC !== -1) {
+        const rowDiff = Math.abs(lastR - rowIndex);
+        const colDiff = Math.abs(lastC - colIndex);
+        
+        // Komşu demek: satır ve sütun farkı en fazla 1 olacak ve ikisi de aynı anda 0 olmayacak
+        const isNeighbor = rowDiff <= 1 && colDiff <= 1 && !(rowDiff === 0 && colDiff === 0);
+        if (!isNeighbor) return; // Komşu değilse fonksiyondan çık, seçime izin verme
+      }
+    }
+
+    // 4. Tüm kurallar geçildi, bloğu seçime ekle ve rengini parlat
+    setSelectedBlockIds(prev => [...prev, clickedBlock.id]);
+    setGrid(prevGrid => {
+      const newGrid = prevGrid.map(row => [...row]);
+      for (let r = 0; r < newGrid.length; r++) {
+        for (let c = 0; c < newGrid[r].length; c++) {
+          if (newGrid[r][c]?.id === clickedBlock.id) {
+            newGrid[r][c] = { ...newGrid[r][c]!, isSelected: true };
+          }
+        }
+      }
+      return newGrid;
+    });
+  };
+
+  // Onayla butonu işleyicisi
+  const handleConfirm = () => {
+    let sum = 0; // Toplamı tutacağımız geçici değişken
+    const selectedBlocksPositions: { r: number; c: number }[] = []; // Koordinatları tutacağımız dizi
+
+    // 1. Grid'i tarayıp seçili olan blokları bulalım, hem toplamı hesaplayalım hem koordinatları kaydedelim
+    for (let r = 0; r < grid.length; r++) {
+      for (let c = 0; c < grid[r].length; c++) {
+        const block = grid[r][c];
+        // Eğer hücre doluysa (block) VE id'si bizim seçtiklerimiz (selectedBlockIds) içindeyse:
+        if (block && selectedBlockIds.includes(block.id)) {
+          sum += block.value;
+          selectedBlocksPositions.push({ r, c });
+        }
+      }
+    }
+
+    // 2. Matematik Kontrolü: Toplam, hedef sayıya eşit mi?
+    if (sum === targetNumber) {
+      // DURUM 1: DOĞRU BİLDİ! (Bloklar patlayacak)
+      setGrid(prevGrid => {
+        const newGrid = prevGrid.map(row => [...row]); // Grid'in kopyasını al (React kuralı)
+        
+        // Kaydettiğimiz koordinatlardaki blokları 'null' yaparak patlatıyoruz (boşaltıyoruz)
+        selectedBlocksPositions.forEach(pos => {
+          newGrid[pos.r][pos.c] = null;
+        });
+
+        // Hedef sayıyı yenile (Eski grid yerine bu yeni patlamış grid'i yolluyoruz ki ulaşılamaz sayı vermesin)
+        setTargetNumber(generateTargetNumber(newGrid));
+        
+        return newGrid; // Ekranı yeni grid ile güncelle
+      });
+    } else {
+      // DURUM 2: YANLIŞ BİLDİ! (Hatalı İşlem yazısı göster ve seçimleri iptal et)
+      
+      // 1. Hata mesajını ekranda göster ve 2 saniye (2000ms) sonra sil
+      setErrorMessage('HATALI İŞLEM');
+      setTimeout(() => {
+        setErrorMessage(null);
+      }, 700);
+
+      // 2. Seçili blokların parlamasını (isSelected) düzgünce (React mantığıyla) normale çevir
+      setGrid(prevGrid => {
+        return prevGrid.map(row => row.map(block => {
+          // Eğer blok varsa ve ID'si bizim seçtiklerimiz arasındaysa, parlamayı kapat
+          return block && selectedBlockIds.includes(block.id) ? { ...block, isSelected: false } : block;
+        }));
+      });
+    }
+
+    // Her iki durumda da (doğru veya yanlış) butona basıldıktan sonra seçili taş hafızasını SIFIRLA
+    setSelectedBlockIds([]);
+  };
+
   return (
   <SafeAreaProvider>
     <SafeAreaView style={styles.container}>
@@ -49,7 +180,10 @@ export default function App() {
           <TouchableOpacity 
             style={styles.restartButton} 
             onPress={() => {
-              setGrid(initializeGrid());
+              const newGrid = initializeGrid();
+              setGrid(newGrid);
+              setTargetNumber(generateTargetNumber(newGrid));
+              setSelectedBlockIds([]); // Yeniden başlayınca seçimleri sıfırla
               setIsGameOver(false);
             }}
           >
@@ -57,25 +191,52 @@ export default function App() {
           </TouchableOpacity>
         </View>
       ) : (
+        <>
+          <View style={styles.headerContainer}>
+            <Text style={styles.targetLabel}>HEDEF SAYI</Text>
+            <Text style={styles.targetNumber}>{targetNumber}</Text>
+          </View>
         <View style={styles.gridBoard}>
           {grid.map((row, rowIndex) => (
             <View key={`row-${rowIndex}`} style={styles.row}>
               {row.map((block, colIndex) => (
-                <View 
+                <TouchableOpacity 
                   key={`cell-${rowIndex}-${colIndex}`} 
+                  activeOpacity={0.8}
+                  onPress={() => handleBlockPress(rowIndex, colIndex)}
                   style={[
                     styles.cell, 
-                    block ? { backgroundColor: block.color } : null 
+                    block ? { backgroundColor: block.color } : null,
+                    block?.isSelected && styles.selectedCell
                   ]}
                 >
                   {block && (
-                    <Text style={styles.blockText}>{block.value}</Text>
+                    <Text style={[styles.blockText, block.isSelected && styles.selectedBlockText]}>
+                      {block.value}
+                    </Text>
                   )}
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           ))}
         </View>
+        
+        {/* ONAYLA BUTONU */}
+        <TouchableOpacity 
+          style={[styles.confirmButton, selectedBlockIds.length >= 2 ? styles.confirmButtonActive : null]}
+          disabled={selectedBlockIds.length < 2}
+          onPress={handleConfirm}
+        >
+          <Text style={styles.confirmText}>ONAYLA</Text>
+        </TouchableOpacity>
+
+        {/* HATA MESAJI (TOAST) */}
+        {errorMessage && (
+          <View style={styles.errorToast}>
+            <Text style={styles.errorToastText}>{errorMessage}</Text>
+          </View>
+        )}
+        </>
       )}
     </SafeAreaView>
   </SafeAreaProvider>
@@ -87,7 +248,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0F172A',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start', // GridBoard'u ve Header'ı biraz daha yukarı almak için değiştirdik
+    paddingTop: 60,
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  targetLabel: {
+    color: '#94A3B8',
+    fontSize: 16,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+  },
+  targetNumber: {
+    color: '#38BDF8',
+    fontSize: 56,
+    fontWeight: '900',
   },
   gridBoard: {
     padding: 8,
@@ -120,6 +297,37 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  selectedCell: {
+    borderWidth: 3,
+    borderColor: '#F8FAFC',
+    transform: [{ scale: 0.9 }], 
+    shadowColor: '#FFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  selectedBlockText: {
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  confirmButton: {
+    marginTop: 30,
+    backgroundColor: '#475569', 
+    paddingHorizontal: 40,
+    paddingVertical: 15,
+    borderRadius: 25,
+  },
+  confirmButtonActive: {
+    backgroundColor: '#10B981', 
+  },
+  confirmText: {
+    color: '#FFF',
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
   gameOverContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -142,5 +350,21 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  errorToast: {
+    position: 'absolute',
+    top: '45%', // Ekranın ortasına yakın
+    backgroundColor: 'rgba(239, 68, 68, 0.95)', // Tailwind Red-500 rengi ve %95 opaklık
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderRadius: 30,
+    zIndex: 100, // Diğer tüm bileşenlerin üstünde durması için
+    elevation: 10,
+  },
+  errorToastText: {
+    color: '#FFF',
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: 2,
   },
 });
