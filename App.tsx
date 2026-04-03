@@ -118,13 +118,11 @@ export default function App() {
   // Onayla butonu işleyicisi
   const handleConfirm = () => {
     let sum = 0; // Toplamı tutacağımız geçici değişken
-    const selectedBlocksPositions: { r: number; c: number }[] = []; // Koordinatları tutacağımız dizi
+    const selectedBlocksPositions: { r: number; c: number }[] = []; 
 
-    // 1. Grid'i tarayıp seçili olan blokları bulalım, hem toplamı hesaplayalım hem koordinatları kaydedelim
     for (let r = 0; r < grid.length; r++) {
       for (let c = 0; c < grid[r].length; c++) {
         const block = grid[r][c];
-        // Eğer hücre doluysa (block) VE id'si bizim seçtiklerimiz (selectedBlockIds) içindeyse:
         if (block && selectedBlockIds.includes(block.id)) {
           sum += block.value;
           selectedBlocksPositions.push({ r, c });
@@ -136,14 +134,12 @@ export default function App() {
     if (sum === targetNumber) {
       // DURUM 1: DOĞRU BİLDİ! (Bloklar patlayacak)
       setGrid(prevGrid => {
-        const newGrid = prevGrid.map(row => [...row]); // Grid'in kopyasını al (React kuralı)
-        
-        // Kaydettiğimiz koordinatlardaki blokları 'null' yaparak patlatıyoruz (boşaltıyoruz)
+        const newGrid = prevGrid.map(row => [...row]);
+
         selectedBlocksPositions.forEach(pos => {
           newGrid[pos.r][pos.c] = null;
         });
 
-        // Hedef sayıyı yenile (Eski grid yerine bu yeni patlamış grid'i yolluyoruz ki ulaşılamaz sayı vermesin)
         setTargetNumber(generateTargetNumber(newGrid));
         
         return newGrid; // Ekranı yeni grid ile güncelle
@@ -151,22 +147,20 @@ export default function App() {
     } else {
       // DURUM 2: YANLIŞ BİLDİ! (Hatalı İşlem yazısı göster ve seçimleri iptal et)
       
-      // 1. Hata mesajını ekranda göster ve 2 saniye (2000ms) sonra sil
       setErrorMessage('HATALI İŞLEM');
       setTimeout(() => {
         setErrorMessage(null);
       }, 700);
 
-      // 2. Seçili blokların parlamasını (isSelected) düzgünce (React mantığıyla) normale çevir
       setGrid(prevGrid => {
         return prevGrid.map(row => row.map(block => {
-          // Eğer blok varsa ve ID'si bizim seçtiklerimiz arasındaysa, parlamayı kapat
+        
           return block && selectedBlockIds.includes(block.id) ? { ...block, isSelected: false } : block;
         }));
       });
     }
 
-    // Her iki durumda da (doğru veya yanlış) butona basıldıktan sonra seçili taş hafızasını SIFIRLA
+    
     setSelectedBlockIds([]);
   };
 
@@ -183,7 +177,7 @@ export default function App() {
               const newGrid = initializeGrid();
               setGrid(newGrid);
               setTargetNumber(generateTargetNumber(newGrid));
-              setSelectedBlockIds([]); // Yeniden başlayınca seçimleri sıfırla
+              setSelectedBlockIds([]); 
               setIsGameOver(false);
             }}
           >
@@ -248,7 +242,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0F172A',
     alignItems: 'center',
-    justifyContent: 'flex-start', // GridBoard'u ve Header'ı biraz daha yukarı almak için değiştirdik
+    justifyContent: 'flex-start', 
     paddingTop: 60,
   },
   headerContainer: {
