@@ -15,7 +15,7 @@ export default function App() {
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Oyun ilk yüklendiğinde hedef sayıyı belirle
+  // Oyun yüklenirken hedef sayıyı belirleme
   useEffect(() => {
     setTargetNumber(generateTargetNumber(grid));
   }, []);
@@ -52,7 +52,7 @@ export default function App() {
     const clickedBlock = grid[rowIndex][colIndex];
     if (!clickedBlock) return; // Boş hücreye tıklandıysa çık
 
-    // 1. Zaten seçiliyse (Sadece en son seçileni geri alabilme kuralı)
+    // Seçilen bloktaki seçilmeyi kaldırma
     if (clickedBlock.isSelected) {
       if (selectedBlockIds.length > 0 && selectedBlockIds[selectedBlockIds.length - 1] === clickedBlock.id) {
         setSelectedBlockIds(prev => prev.slice(0, -1)); // Son ID'yi listeden çıkar
@@ -69,13 +69,13 @@ export default function App() {
           return newGrid;
         });
       }
-      return; // Daha eski bir bloğa tıkladıysa hiçbir şey yapma
+      return; 
     }
 
-    // 2. Maksimum 4 blok seçilebilir kuralı
+    // En fazla 4 blok seçebilme
     if (selectedBlockIds.length >= 4) return;
 
-    // 3. Komşuluk kuralı (Eğer listede daha önce seçilmiş blok varsa)
+    // Komşuluk kuralı
     if (selectedBlockIds.length > 0) {
       const lastSelectedId = selectedBlockIds[selectedBlockIds.length - 1];
       let lastR = -1, lastC = -1;
@@ -100,7 +100,7 @@ export default function App() {
       }
     }
 
-    // 4. Tüm kurallar geçildi, bloğu seçime ekle ve rengini parlat
+    // Tüm kurallar sağlandıysa blok seçilmiş olur
     setSelectedBlockIds(prev => [...prev, clickedBlock.id]);
     setGrid(prevGrid => {
       const newGrid = prevGrid.map(row => [...row]);
@@ -130,9 +130,9 @@ export default function App() {
       }
     }
 
-    // 2. Matematik Kontrolü: Toplam, hedef sayıya eşit mi?
+    // Toplam ile hedef sayıyı kıyaslama
     if (sum === targetNumber) {
-      // DURUM 1: DOĞRU BİLDİ! (Bloklar patlayacak)
+      // Doğru ise blokları yok etme 
       setGrid(prevGrid => {
         const newGrid = prevGrid.map(row => [...row]);
 
@@ -145,8 +145,7 @@ export default function App() {
         return newGrid; // Ekranı yeni grid ile güncelle
       });
     } else {
-      // DURUM 2: YANLIŞ BİLDİ! (Hatalı İşlem yazısı göster ve seçimleri iptal et)
-      
+      // Yanlış ise hata mesajı gösterme ve işlemleri iptal etme
       setErrorMessage('HATALI İŞLEM');
       setTimeout(() => {
         setErrorMessage(null);
@@ -224,7 +223,7 @@ export default function App() {
           <Text style={styles.confirmText}>ONAYLA</Text>
         </TouchableOpacity>
 
-        {/* HATA MESAJI (TOAST) */}
+        {/* HATA MESAJI */}
         {errorMessage && (
           <View style={styles.errorToast}>
             <Text style={styles.errorToastText}>{errorMessage}</Text>
@@ -347,12 +346,12 @@ const styles = StyleSheet.create({
   },
   errorToast: {
     position: 'absolute',
-    top: '45%', // Ekranın ortasına yakın
-    backgroundColor: 'rgba(239, 68, 68, 0.95)', // Tailwind Red-500 rengi ve %95 opaklık
+    top: '45%', 
+    backgroundColor: 'rgba(239, 68, 68, 0.95)', 
     paddingVertical: 15,
     paddingHorizontal: 40,
     borderRadius: 30,
-    zIndex: 100, // Diğer tüm bileşenlerin üstünde durması için
+    zIndex: 100, 
     elevation: 10,
   },
   errorToastText: {
