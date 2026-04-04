@@ -25,14 +25,12 @@ export const initializeGrid = (): GameGrid => {
         row.push(null);
       }
     }
+    
     grid.push(row);
   }
 
-
-
   return grid;
 };
-
 
 // Yerçekimi fonksiyonu
 export const applyGravity = (currentGrid: GameGrid): GameGrid => {
